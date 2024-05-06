@@ -1,0 +1,158 @@
+Converted from Daniel Shiffman's P5.js Code 
+Mathematical Marbling
+by codingtrain May 2, 2024
+
+// Array to store all drops of ink
+ArrayList<Drop> drops = new ArrayList<Drop>(); 
+PVector start;
+
+void  setup() {
+  size(800, 800);
+  background(0);
+
+  //Add 20 ink drops at the center of the canvas
+  for (int i = 0; i < 30; i++) {
+    int r = int(random(10, 50));
+    addInk(width/2, height/2, r);
+  }
+
+  //Add 50 ink drops at random positions on the canvas
+  for (int i = 0; i < 50; i++) {
+    int x = int(random(width));
+    int y = int(random(height));
+    int r = int(random(10, 50));
+    addInk(x, y, r);
+  }
+}
+
+// Track the start of mouse drag
+
+// Record the starting point
+void mousePressed() {
+  start = new PVector(mouseX, mouseY);
+}
+
+// Handle mouse drag to simulate ink spreading
+void mouseDragged() {
+  // Calculate vector from start to current mouse position
+  PVector end = new PVector(mouseX, mouseY);
+  end.sub(start);
+  end.normalize();
+
+  //  // Simulate tine effects based on the mouse drag
+  tineLine(end, mouseX, mouseY, 2, 16);
+}
+
+// Apply tine effects to ink drops
+void tineLine(PVector v, int x, int y, int z, int c) {
+  // Apply the effect to each drop
+  for (Drop drop : drops) {
+    drop.tine(v, x, y, z, c);
+  }
+}
+
+// Add an ink drop to the canvas
+void addInk(int x, int y, int r) {
+  // Create a new Drop object
+
+  Drop drop = new Drop(x, y, r);
+                              
+  // Interact new drop with all existing drops
+  for (Drop other : drops) {
+    other.marble(drop);
+  }
+
+  // Add the new drop to the array of drops
+  drops.add(drop);
+}
+
+void draw() {
+  background(0);
+  for (Drop drop : drops) {
+    drop.show();
+  }
+}
+
+
+
+
+// Detail level for drawing circles
+// Maybe make dynamic based on circle radius?
+
+
+
+class Drop {
+  int circleDetail = 40;
+  ArrayList<PVector> vertices= new ArrayList<PVector>(); 
+  PVector center = new PVector();
+  int radius;
+  int col;
+
+  Drop (int x, int y, int r) {
+
+    // Center position of the drop  
+    center = new PVector (x, y);
+
+    // Radius of the drop
+    radius = r;
+
+
+    // Calculate vertices based on circle detail and radius
+
+    for (int i = 0; i < circleDetail; i++) {
+      float angle = map(i, 0, circleDetail, 0, TWO_PI);
+      PVector v = new PVector (cos(angle), sin(angle));
+      v.mult(radius);
+      v.add(center);
+      vertices.add(v);
+    }
+
+    //Random grayscale color
+    col = int(random(150, 255));
+  }
+
+  // Apply a tine math
+  // https://people.csail.mit.edu/jaffer/Marbling/Mathematics
+
+  void tine(PVector m, int x, int y, float z, float c) {
+    PVector pb = new PVector();
+    float u = 1 / pow(2, 1 / c);
+    PVector  b = new PVector (x, y);
+
+    for (PVector v : vertices) {
+
+      //pb = p5.Vector.sub(v, b);
+      pb = v.sub(v, b);
+      PVector n = m.copy().rotate(HALF_PI);
+      float d = abs(pb.dot(n));
+      float mag = z * pow(u, d);
+      v.add(m.copy().mult(mag));
+    }
+  }
+
+  // Apply displacement from another drop
+  // https://people.csail.mit.edu/jaffer/Marbling/Dropping-Paint
+  void marble(Drop other) {
+    for (PVector v : vertices) {
+      PVector c = other.center;
+      int r = other.radius;
+      PVector p = v.copy();
+      p.sub(c);
+      float m = p.mag();
+      float root = sqrt(1 + (r * r) / (m * m));
+      p.mult(root);
+      p.add(c);
+      v.set(p);
+    }
+  }
+
+  void show() {
+    fill(col);
+    noStroke();
+    beginShape();
+    for (PVector v : vertices) {
+      vertex(v.x, v.y);
+    }
+    endShape(CLOSE);
+  }
+}
